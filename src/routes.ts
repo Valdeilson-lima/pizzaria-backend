@@ -1,4 +1,6 @@
 import { Router } from "express";
+import multer from "multer";
+import uploadConfig from "./config/multer";
 import { validateSchema } from "./middlewares/validateSchema";
 import { createUserSchema, authUserSchema } from "./schemas/userSchema";
 import { createCategorySchema } from "./schemas/createCategorySchema";
@@ -9,8 +11,10 @@ import { CreateCategoryController } from "./controllers/category/createCategoryC
 import { ListCategoryController } from "./controllers/category/listCategoryController";
 import { isAuthenticated } from "./middlewares/isAutehtication";
 import { isAdmin } from "./middlewares/isAdmin";
+import { CreateProductController } from "./controllers/product/createProductController";
 
 const router = Router();
+const upload = multer(uploadConfig);
 
 //Routes users
 router.post(
@@ -34,5 +38,14 @@ router.post(
   new CreateCategoryController().handle
 );
 router.get("/category", isAuthenticated, new ListCategoryController().handle);
+
+//Routes products
+router.post(
+  "/product",
+  isAuthenticated,
+  isAdmin,
+  upload.single("file"),
+  new CreateProductController().handle
+);
 
 export default router;
