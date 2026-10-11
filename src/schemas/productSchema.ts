@@ -18,4 +18,16 @@ const createProductSchema = z.object({
   }),
 });
 
-export { createProductSchema };
+const listProductsSchema = z.object({
+  query: z
+    .object({
+      disabled: z
+        .enum(["true", "false"], {
+          message: "O parâmetro disabled deve ser 'true' ou 'false'",
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+export { createProductSchema, listProductsSchema };

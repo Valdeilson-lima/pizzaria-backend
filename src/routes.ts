@@ -4,7 +4,10 @@ import uploadConfig from "./config/multer";
 import { validateSchema } from "./middlewares/validateSchema";
 import { createUserSchema, authUserSchema } from "./schemas/userSchema";
 import { createCategorySchema } from "./schemas/createCategorySchema";
-import { createProductSchema } from "./schemas/productSchema";
+import {
+  createProductSchema,
+  listProductsSchema,
+} from "./schemas/productSchema";
 import { CreateUserController } from "./controllers/user/createUserController";
 import { AuthUserController } from "./controllers/user/authUserController";
 import { DetailUserController } from "./controllers/user/detailUserController";
@@ -13,6 +16,7 @@ import { ListCategoryController } from "./controllers/category/listCategoryContr
 import { isAuthenticated } from "./middlewares/isAutehtication";
 import { isAdmin } from "./middlewares/isAdmin";
 import { CreateProductController } from "./controllers/product/createProductController";
+import { ListProductsController } from "./controllers/product/listProductsController";
 
 const router = Router();
 const upload = multer(uploadConfig);
@@ -48,6 +52,12 @@ router.post(
   upload.single("file"),
   validateSchema(createProductSchema),
   new CreateProductController().handle
+);
+router.get(
+  "/products",
+  isAuthenticated,
+  validateSchema(listProductsSchema),
+  new ListProductsController().handle
 );
 
 export default router;
