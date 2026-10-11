@@ -132,7 +132,8 @@ backend/
 │   ├── config/                    # Constantes de configuração e adapters de ambiente
 │   ├── controllers/               # Controladores HTTP desacoplados por domínio
 │   │   ├── category/
-│   │   │   └── createCategoryController.ts  # Tratamento HTTP para criação de categorias
+│   │   │   ├── createCategoryController.ts  # Tratamento HTTP para criação de categorias
+│   │   │   └── listCategoryController.ts    # Tratamento HTTP para listagem de categorias
 │   │   └── user/
 │   │       ├── authUserController.ts        # Login e geração de sessão JWT
 │   │       ├── createUserController.ts      # Registro de novos usuários
@@ -150,7 +151,8 @@ backend/
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
 │   │   ├── category/
-│   │   │   └── createCategoryService.ts     # Regras de cadastro e unicidade de categorias
+│   │   │   ├── createCategoryService.ts     # Regras de cadastro e unicidade de categorias
+│   │   │   └── listCategoryService.ts       # Consulta e ordenação de categorias cadastradas
 │   │   └── user/
 │   │       ├── authUserService.ts           # Hash check, validação e assinatura de JWT
 │   │       ├── createUserService.ts         # Criação de usuário com hash bcrypt
@@ -387,6 +389,7 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 | `POST` | `/api/session`  | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.          |
 | `GET`  | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.      |
 | `POST` | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                       |
+| `GET`  | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.         |
 
 ---
 
@@ -527,6 +530,34 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "error": "Categoria já existe"
+  }
+  ```
+
+---
+
+#### 5. Listar Categorias (`GET /api/category`)
+
+- **Nível de Acesso:** Autenticado (qualquer usuário logado com perfil `STAFF` ou `ADMIN`, sem exigência de ser admin).
+- **Request Headers:** `Authorization: Bearer <TOKEN>`
+- **Response `200 OK`:**
+  ```json
+  [
+    {
+      "id": "d8a1c4b2-7fa3-4c90-9b48-998877665544",
+      "name": "Bebidas",
+      "createdAt": "2026-03-15T18:00:00.000Z"
+    },
+    {
+      "id": "e9b2d5c3-8fa4-5d91-0c59-009988776655",
+      "name": "Pizzas Especiais",
+      "createdAt": "2026-03-15T19:00:00.000Z"
+    }
+  ]
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
   }
   ```
 
