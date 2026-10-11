@@ -140,6 +140,7 @@ backend/
 │   │   │   └── listCategoryController.ts    # Tratamento HTTP para listagem de categorias
 │   │   ├── product/
 │   │   │   ├── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
+│   │   │   ├── deleteProductController.ts   # Tratamento HTTP para desativação (soft delete) de produto
 │   │   │   └── listProductsController.ts    # Tratamento HTTP para listagem de produtos com filtro
 │   │   └── user/
 │   │       ├── authUserController.ts        # Login e geração de sessão JWT
@@ -163,6 +164,7 @@ backend/
 │   │   │   └── listCategoryService.ts       # Consulta e ordenação de categorias cadastradas
 │   │   ├── product/
 │   │   │   ├── createProductService.ts      # Validação de categoria, upload em stream e persistência
+│   │   │   ├── deleteProductService.ts      # Desativação de produto (soft delete via disabled = true)
 │   │   │   └── listProductsService.ts       # Consulta e filtragem de produtos por status (disabled)
 │   │   └── user/
 │   │       ├── authUserService.ts           # Hash check, validação e assinatura de JWT
@@ -433,15 +435,16 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 
 ### 6.1. Tabela de Rotas
 
-| Método | Endpoint        | Nível de Acesso                        | Descrição                                                                     |
-| :----- | :-------------- | :------------------------------------- | :---------------------------------------------------------------------------- |
-| `POST` | `/api/users`    | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.        |
-| `POST` | `/api/session`  | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                 |
-| `GET`  | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.             |
-| `POST` | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                              |
-| `GET`  | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                |
-| `POST` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                 |
-| `GET`  | `/api/products` | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`). |
+| Método   | Endpoint        | Nível de Acesso                        | Descrição                                                                     |
+| :------- | :-------------- | :------------------------------------- | :---------------------------------------------------------------------------- |
+| `POST`   | `/api/users`    | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.        |
+| `POST`   | `/api/session`  | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                 |
+| `GET`    | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.             |
+| `POST`   | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                              |
+| `GET`    | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                |
+| `POST`   | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                 |
+| `GET`    | `/api/products` | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`). |
+| `DELETE` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).          |
 
 ---
 
@@ -701,6 +704,48 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "errors": [{ "message": "O parâmetro disabled deve ser 'true' ou 'false'" }]
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 8. Desativar Produto (`DELETE /api/product`)
+
+- **Nível de Acesso:** Autenticado + Autorizado (Role `ADMIN`).
+- **Request Headers:** `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `productId` _(obrigatório, string UUID)_: Identificador único do produto a ser desabilitado.
+- **Exemplo de URL:**
+  - `/api/product?productId=a5d3f1c2-9fa4-4b90-9c48-223344556677`
+- **Operação:** Soft-delete (altera o campo `disabled` para `true` preservando integridade referencial com pedidos e itens históricos).
+- **Response `200 OK`:**
+  ```json
+  {
+    "message": "Produto desabilitado com sucesso"
+  }
+  ```
+- **Response `400 Bad Request` (Parâmetro ausente):**
+  ```json
+  {
+    "error": "Produto não informado"
+  }
+  ```
+- **Response `400 Bad Request` (Produto inexistente):**
+  ```json
+  {
+    "error": "Produto não encontrado"
+  }
+  ```
+- **Response `403 Forbidden` (Usuário não possui perfil ADMIN):**
+  ```json
+  {
+    "error": "Acesso negado"
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**

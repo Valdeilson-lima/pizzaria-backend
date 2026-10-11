@@ -17,6 +17,7 @@ import { isAuthenticated } from "./middlewares/isAutehtication";
 import { isAdmin } from "./middlewares/isAdmin";
 import { CreateProductController } from "./controllers/product/createProductController";
 import { ListProductsController } from "./controllers/product/listProductsController";
+import { DeleteProductController } from "./controllers/product/deleteProductController";
 
 const router = Router();
 const upload = multer(uploadConfig);
@@ -60,4 +61,10 @@ router.get(
   new ListProductsController().handle
 );
 
+router.delete(
+  "/product",
+  isAuthenticated,
+  isAdmin,
+  new DeleteProductController().handle
+);
 export default router;
