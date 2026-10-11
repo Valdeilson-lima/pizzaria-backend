@@ -17,11 +17,17 @@ export const isAdmin = async (
       id: user_id,
     },
     select: {
-      email: true,
+      role: true,
     },
   });
 
   if (!user) {
     return _res.status(401).json({ error: "Usuário não autenticado" });
   }
+
+  if (user.role !== "ADMIN") {
+    return _res.status(403).json({ error: "Acesso negado" });
+  }
+
+  return next();
 };
