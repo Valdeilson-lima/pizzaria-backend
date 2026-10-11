@@ -141,6 +141,7 @@ backend/
 │   │   ├── product/
 │   │   │   ├── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
 │   │   │   ├── deleteProductController.ts   # Tratamento HTTP para desativação (soft delete) de produto
+│   │   │   ├── listByCategoryController.ts  # Tratamento HTTP para listagem de produtos por categoria
 │   │   │   └── listProductsController.ts    # Tratamento HTTP para listagem de produtos com filtro
 │   │   └── user/
 │   │       ├── authUserController.ts        # Login e geração de sessão JWT
@@ -165,6 +166,7 @@ backend/
 │   │   ├── product/
 │   │   │   ├── createProductService.ts      # Validação de categoria, upload em stream e persistência
 │   │   │   ├── deleteProductService.ts      # Desativação de produto (soft delete via disabled = true)
+│   │   │   ├── listByCategoryService.ts     # Busca de produtos vinculados a uma categoria específica
 │   │   │   └── listProductsService.ts       # Consulta e filtragem de produtos por status (disabled)
 │   │   └── user/
 │   │       ├── authUserService.ts           # Hash check, validação e assinatura de JWT
@@ -296,6 +298,14 @@ export const listProductsSchema = z.object({
         .optional(),
     })
     .optional(),
+});
+
+export const listByCategorySchema = z.object({
+  query: z.object({
+    categoryId: z
+      .string({ message: "O id da categoria é obrigatório" })
+      .min(1, "O id da categoria é obrigatório"),
+  }),
 });
 ```
 
@@ -435,16 +445,17 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 
 ### 6.1. Tabela de Rotas
 
-| Método   | Endpoint        | Nível de Acesso                        | Descrição                                                                     |
-| :------- | :-------------- | :------------------------------------- | :---------------------------------------------------------------------------- |
-| `POST`   | `/api/users`    | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.        |
-| `POST`   | `/api/session`  | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                 |
-| `GET`    | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.             |
-| `POST`   | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                              |
-| `GET`    | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                |
-| `POST`   | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                 |
-| `GET`    | `/api/products` | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`). |
-| `DELETE` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).          |
+| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                        |
+| :------- | :---------------------- | :------------------------------------- | :------------------------------------------------------------------------------- |
+| `POST`   | `/api/users`            | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.           |
+| `POST`   | `/api/session`          | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                    |
+| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.                |
+| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                                 |
+| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                   |
+| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                    |
+| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`).    |
+| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).             |
+| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`. |
 
 ---
 
@@ -746,6 +757,45 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "error": "Acesso negado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 9. Listar Produtos por Categoria (`GET /api/category/product`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN` (não exige perfil administrativo).
+- **Request Headers:** `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `categoryId` _(obrigatório, string UUID)_: Identificador da categoria cujos produtos serão listados.
+- **Exemplo de URL:**
+  - `/api/category/product?categoryId=d8a1c4b2-7fa3-4c90-9b48-998877665544`
+- **Response `200 OK`:**
+  ```json
+  [
+    {
+      "id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+      "name": "Pizza Calabresa",
+      "price": 45,
+      "description": "Molho de tomate artesanal, mussarela fatiada e calabresa",
+      "banner": "https://res.cloudinary.com/demo/image/upload/v1712800000/products/1712800000_pizza.webp",
+      "disabled": false,
+      "category_id": "d8a1c4b2-7fa3-4c90-9b48-998877665544",
+      "createdAt": "2026-03-15T20:00:00.000Z",
+      "updatedAt": "2026-03-15T20:00:00.000Z"
+    }
+  ]
+  ```
+- **Response `400 Bad Request` (Query param ausente):**
+  ```json
+  {
+    "errors": [{ "message": "O id da categoria é obrigatório" }]
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**

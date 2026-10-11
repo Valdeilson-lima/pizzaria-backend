@@ -21,16 +21,17 @@ API RESTful para gestão operacional de pizzaria desenvolvida com **Node.js**, *
 
 ## 🛣️ Rotas Disponíveis (Base: `/api`)
 
-| Método   | Endpoint        | Nível de Acesso                        | Descrição                                                            |
-| :------- | :-------------- | :------------------------------------- | :------------------------------------------------------------------- |
-| `POST`   | `/api/users`    | **Público**                            | Cadastro de novo usuário/colaborador (perfil `STAFF` padrão).        |
-| `POST`   | `/api/session`  | **Público**                            | Login de usuário com e-mail/senha e geração de token JWT.            |
-| `GET`    | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do usuário autenticado.                       |
-| `POST`   | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cadastra uma nova categoria no cardápio.                             |
-| `GET`    | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias cadastradas ordenadas por nome.            |
-| `POST`   | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.        |
-| `GET`    | `/api/products` | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro por `disabled` (padrão: `false`). |
-| `DELETE` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`). |
+| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                            |
+| :------- | :---------------------- | :------------------------------------- | :------------------------------------------------------------------- |
+| `POST`   | `/api/users`            | **Público**                            | Cadastro de novo usuário/colaborador (perfil `STAFF` padrão).        |
+| `POST`   | `/api/session`          | **Público**                            | Login de usuário com e-mail/senha e geração de token JWT.            |
+| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do usuário autenticado.                       |
+| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cadastra uma nova categoria no cardápio.                             |
+| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias cadastradas ordenadas por nome.            |
+| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.        |
+| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro por `disabled` (padrão: `false`). |
+| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`). |
+| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria (`categoryId`). |
 
 ---
 
