@@ -13,6 +13,7 @@ API RESTful para gestão operacional de pizzaria desenvolvida com **Node.js**, *
 - **Framework Web:** [Express 5](https://expressjs.com/)
 - **ORM & Banco de Dados:** [Prisma ORM 7](https://www.prisma.io/) com `@prisma/adapter-pg` sobre [PostgreSQL](https://www.postgresql.org/)
 - **Validação de Schemas:** [Zod](https://zod.dev/)
+- **Upload & Armazenamento de Mídia:** [Multer](https://github.com/expressjs/multer) (buffer em memória) e [Cloudinary](https://cloudinary.com/) (CDN / Cloud storage)
 - **Autenticação & Criptografia:** [JSON Web Token (JWT)](https://jwt.io/) e [bcryptjs](https://github.com/dcodeIO/bcrypt.js)
 - **Qualidade de Código & Git Hooks:** [Husky](https://typicode.github.io/husky/), [lint-staged](https://github.com/lint-staged/lint-staged), [Prettier](https://prettier.io/) e [Commitlint](https://commitlint.js.org/)
 
@@ -27,6 +28,7 @@ API RESTful para gestão operacional de pizzaria desenvolvida com **Node.js**, *
 | `GET`  | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do usuário autenticado.                |
 | `POST` | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cadastra uma nova categoria no cardápio.                      |
 | `GET`  | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias cadastradas ordenadas por nome.     |
+| `POST` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary. |
 
 ---
 
@@ -60,6 +62,11 @@ Exemplo das variáveis:
 PORT=3333
 DATABASE_URL="postgresql://postgres:sua_senha@localhost:5432/DBPizzaria?schema=public"
 JWT_SECRET="sua_chave_secreta_jwt_longa_e_segura"
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME="seu_cloud_name"
+CLOUDINARY_API_KEY="sua_api_key"
+CLOUDINARY_API_SECRET="sua_api_secret"
 ```
 
 ### 4. Banco de Dados e Migrações

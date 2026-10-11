@@ -12,25 +12,27 @@ A **Pizzaria Backend API** é uma aplicação RESTful robusta desenvolvida para 
 
 ### 1.2. Matriz Tecnológica
 
-| Tecnologia / Pacote      | Versão Exata | Categoria                | Papel Específico no Ecossistema                                                                        |
-| :----------------------- | :----------- | :----------------------- | :----------------------------------------------------------------------------------------------------- |
-| **Node.js**              | `>= 20.x`    | Runtime                  | Ambiente de execução JavaScript/TypeScript no servidor.                                                |
-| **TypeScript**           | `^7.0.2`     | Linguagem                | Superset tipado, configurado com verificação estrita (`strict: true`) e resolução de módulos `node16`. |
-| **Express**              | `^5.2.1`     | Framework HTTP           | Servidor HTTP minimalista na versão 5, com tratamento nativo e robusto de rotas assíncronas.           |
-| **Prisma ORM**           | `^7.10.0`    | ORM & Migrações          | Mapeamento objeto-relacional de última geração, CLI de migrações e introspecção.                       |
-| **@prisma/client**       | `^7.10.0`    | Database Client          | Cliente de queries tipado gerado a partir do schema (`src/generated/prisma`).                          |
-| **@prisma/adapter-pg**   | `^7.10.0`    | Driver Adapter           | Adaptador oficial do Prisma 7 para integração direta com conexões nativas do PostgreSQL.               |
-| **pg** (`node-postgres`) | `^8.23.0`    | Database Driver          | Driver de conexão PostgreSQL de alta performance em baixo nível.                                       |
-| **Zod**                  | `^4.6.5`     | Validação de Dados       | Validação assíncrona e declaração de contratos de schemas para `body`, `query` e `params`.             |
-| **jsonwebtoken**         | `^9.0.3`     | Autenticação             | Emissão e verificação de tokens JWT no padrão stateless (Bearer Token).                                |
-| **bcryptjs**             | `^3.0.3`     | Segurança & Criptografia | Algoritmo de hash unidirecional com salt para armazenamento seguro de senhas.                          |
-| **cors**                 | `^2.8.6`     | Segurança de Rede        | Middleware de Cross-Origin Resource Sharing para integração com SPAs e frontends.                      |
-| **dotenv**               | `^18.0.0`    | Configuração             | Carregamento automático de variáveis de ambiente a partir do arquivo `.env`.                           |
-| **tsx**                  | `^4.23.13`   | Tooling / Dev Server     | Transpilador e executor rápido TypeScript em tempo de desenvolvimento com suporte a watch mode.        |
-| **Husky**                | `^9.1.7`     | Git Hooks                | Gerenciador de hooks para execução automatizada de checagens pré-commit e pré-push.                    |
-| **lint-staged**          | `^17.6.0`    | Git Hooks                | Execução seletiva de formatadores apenas em arquivos staged no git.                                    |
-| **Prettier**             | `^3.9.10`    | Formatação               | Padronização estética consistente de estilo de código.                                                 |
-| **Commitlint**           | `^21.2.3`    | Governança Git           | Imposição das convenções do Conventional Commits nas mensagens de commit.                              |
+| Tecnologia / Pacote      | Versão Exata | Categoria                | Papel Específico no Ecossistema                                                                           |
+| :----------------------- | :----------- | :----------------------- | :-------------------------------------------------------------------------------------------------------- |
+| **Node.js**              | `>= 20.x`    | Runtime                  | Ambiente de execução JavaScript/TypeScript no servidor.                                                   |
+| **TypeScript**           | `^7.0.2`     | Linguagem                | Superset tipado, configurado com verificação estrita (`strict: true`) e resolução de módulos `node16`.    |
+| **Express**              | `^5.2.1`     | Framework HTTP           | Servidor HTTP minimalista na versão 5, com tratamento nativo e robusto de rotas assíncronas.              |
+| **Prisma ORM**           | `^7.10.0`    | ORM & Migrações          | Mapeamento objeto-relacional de última geração, CLI de migrações e introspecção.                          |
+| **@prisma/client**       | `^7.10.0`    | Database Client          | Cliente de queries tipado gerado a partir do schema (`src/generated/prisma`).                             |
+| **@prisma/adapter-pg**   | `^7.10.0`    | Driver Adapter           | Adaptador oficial do Prisma 7 para integração direta com conexões nativas do PostgreSQL.                  |
+| **pg** (`node-postgres`) | `^8.23.0`    | Database Driver          | Driver de conexão PostgreSQL de alta performance em baixo nível.                                          |
+| **Zod**                  | `^4.6.5`     | Validação de Dados       | Validação assíncrona e declaração de contratos de schemas para `body`, `query` e `params`.                |
+| **Multer**               | `^2.4.0`     | Upload & Multipart       | Middleware para processamento de requisições `multipart/form-data` e buffer em memória (`memoryStorage`). |
+| **Cloudinary**           | `^2.11.0`    | Armazenamento de Mídia   | SDK para upload e hospedagem em nuvem de imagens/banners de produtos via stream.                          |
+| **jsonwebtoken**         | `^9.0.3`     | Autenticação             | Emissão e verificação de tokens JWT no padrão stateless (Bearer Token).                                   |
+| **bcryptjs**             | `^3.0.3`     | Segurança & Criptografia | Algoritmo de hash unidirecional com salt para armazenamento seguro de senhas.                             |
+| **cors**                 | `^2.8.6`     | Segurança de Rede        | Middleware de Cross-Origin Resource Sharing para integração com SPAs e frontends.                         |
+| **dotenv**               | `^18.0.0`    | Configuração             | Carregamento automático de variáveis de ambiente a partir do arquivo `.env`.                              |
+| **tsx**                  | `^4.23.13`   | Tooling / Dev Server     | Transpilador e executor rápido TypeScript em tempo de desenvolvimento com suporte a watch mode.           |
+| **Husky**                | `^9.1.7`     | Git Hooks                | Gerenciador de hooks para execução automatizada de checagens pré-commit e pré-push.                       |
+| **lint-staged**          | `^17.6.0`    | Git Hooks                | Execução seletiva de formatadores apenas em arquivos staged no git.                                       |
+| **Prettier**             | `^3.9.10`    | Formatação               | Padronização estética consistente de estilo de código.                                                    |
+| **Commitlint**           | `^21.2.3`    | Governança Git           | Imposição das convenções do Conventional Commits nas mensagens de commit.                                 |
 
 ---
 
@@ -129,11 +131,15 @@ backend/
 │   ├── @types/                    # Extensões e declarações de tipos globais do TypeScript
 │   │   └── express/
 │   │       └── index.d.ts         # Injeção de 'user_id' na interface Request do Express
-│   ├── config/                    # Constantes de configuração e adapters de ambiente
+│   ├── config/                    # Constantes de configuração e adapters de terceiros
+│   │   ├── cloudinary.ts          # Inicialização e credenciais do SDK do Cloudinary
+│   │   └── multer.ts              # Configuração do Multer (memoryStorage, limites e filtros)
 │   ├── controllers/               # Controladores HTTP desacoplados por domínio
 │   │   ├── category/
 │   │   │   ├── createCategoryController.ts  # Tratamento HTTP para criação de categorias
 │   │   │   └── listCategoryController.ts    # Tratamento HTTP para listagem de categorias
+│   │   ├── product/
+│   │   │   └── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
 │   │   └── user/
 │   │       ├── authUserController.ts        # Login e geração de sessão JWT
 │   │       ├── createUserController.ts      # Registro de novos usuários
@@ -148,11 +154,14 @@ backend/
 │   │   └── validateSchema.ts      # Middleware genérico de validação assíncrona Zod
 │   ├── schemas/                   # Schemas Zod de contrato de entrada (Body, Query, Params)
 │   │   ├── createCategorySchema.ts          # Contrato de payload para categoria
+│   │   ├── productSchema.ts                 # Contrato de payload para criação de produtos
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
 │   │   ├── category/
 │   │   │   ├── createCategoryService.ts     # Regras de cadastro e unicidade de categorias
 │   │   │   └── listCategoryService.ts       # Consulta e ordenação de categorias cadastradas
+│   │   ├── product/
+│   │   │   └── createProductService.ts      # Validação de categoria, upload em stream e persistência
 │   │   └── user/
 │   │       ├── authUserService.ts           # Hash check, validação e assinatura de JWT
 │   │       ├── createUserService.ts         # Criação de usuário com hash bcrypt
@@ -249,6 +258,33 @@ export const createCategorySchema = z.object({
   }),
 });
 ```
+
+#### Criação de Produtos (`src/schemas/productSchema.ts`):
+
+```typescript
+import { z } from "zod";
+
+export const createProductSchema = z.object({
+  body: z.object({
+    name: z
+      .string({ message: "Nome do produto é obrigatório" })
+      .min(1, "Nome do produto é obrigatório"),
+    price: z
+      .string()
+      .min(1, "Preço é obrigatório")
+      .regex(/^[0-9]+$/, "Preço deve ser numérico"),
+    description: z
+      .string({ message: "Descrição é obrigatória" })
+      .min(1, "Descrição é obrigatória"),
+    categoryId: z
+      .string({ message: "Categoria é obrigatória" })
+      .min(1, "Categoria é obrigatória"),
+  }),
+});
+```
+
+> **Regra Arquitetural para Uploads (`multipart/form-data`):**  
+> O middleware `express.json()` não processa requisições multipart. Em rotas que recebem arquivos (como `POST /api/product`), o middleware do Multer (`upload.single(...)`) **deve obrigatoriamente preceder** o `validateSchema(...)` no pipeline do Express. Isso assegura que os campos do formulário sejam lidos da stream e populados no `req.body` antes da execução do parse assíncrono do Zod.
 
 ---
 
@@ -390,6 +426,7 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 | `GET`  | `/api/me`       | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.      |
 | `POST` | `/api/category` | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                       |
 | `GET`  | `/api/category` | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.         |
+| `POST` | `/api/product`  | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.          |
 
 ---
 
@@ -563,6 +600,59 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 
 ---
 
+#### 6. Criar Produto com Upload (`POST /api/product`)
+
+- **Nível de Acesso:** Autenticado + Autorizado (Role `ADMIN`).
+- **Request Headers:**
+  - `Authorization: Bearer <TOKEN>`
+  - `Content-Type: multipart/form-data`
+- **Form Data (Multipart Body):**
+  - `name`: String (ex: `"Pizza Calabresa"`)
+  - `price`: String/Number (ex: `"45"`)
+  - `description`: String (ex: `"Molho de tomate artesanal, mussarela fatiada e calabresa"`)
+  - `categoryId`: String UUID da categoria existente
+  - `file`: Arquivo de imagem (`image/jpeg`, `image/png`, `image/webp` — máx. 4MB)
+- **Response `201 Created`:**
+  ```json
+  {
+    "id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+    "name": "Pizza Calabresa",
+    "price": 45,
+    "description": "Molho de tomate artesanal, mussarela fatiada e calabresa",
+    "banner": "https://res.cloudinary.com/demo/image/upload/v1712800000/products/1712800000_pizza.webp",
+    "category_id": "d8a1c4b2-7fa3-4c90-9b48-998877665544"
+  }
+  ```
+- **Response `400 Bad Request` (Arquivo ausente):**
+  ```json
+  {
+    "error": "Arquivo não fornecido"
+  }
+  ```
+- **Response `400 Bad Request` (Falha de Validação Zod):**
+  ```json
+  {
+    "errors": [
+      { "message": "Preço deve ser numérico" },
+      { "message": "Categoria é obrigatória" }
+    ]
+  }
+  ```
+- **Response `400 Bad Request` (Categoria inexistente):**
+  ```json
+  {
+    "error": "Categoria não encontrada"
+  }
+  ```
+- **Response `403 Forbidden` (Usuário não possui perfil ADMIN):**
+  ```json
+  {
+    "error": "Acesso negado"
+  }
+  ```
+
+---
+
 ## 7. Configuração de Ambiente & Execução
 
 ### 7.1. Variáveis de Ambiente (`.env.example`)
@@ -578,6 +668,11 @@ DATABASE_URL="postgresql://postgres:sua_senha@localhost:5432/DBPizzaria?schema=p
 
 # Chave secreta de alta entropia para assinatura dos JWTs
 JWT_SECRET="sua_chave_secreta_jwt_longa_e_aleatoria_aqui"
+
+# Configuração do Cloudinary (Upload e Hospedagem de Imagens de Produtos)
+CLOUDINARY_CLOUD_NAME="seu_cloud_name"
+CLOUDINARY_API_KEY="sua_api_key"
+CLOUDINARY_API_SECRET="sua_api_secret"
 ```
 
 ### 7.2. Passo a Passo para Execução Local

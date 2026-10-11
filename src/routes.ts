@@ -4,6 +4,7 @@ import uploadConfig from "./config/multer";
 import { validateSchema } from "./middlewares/validateSchema";
 import { createUserSchema, authUserSchema } from "./schemas/userSchema";
 import { createCategorySchema } from "./schemas/createCategorySchema";
+import { createProductSchema } from "./schemas/productSchema";
 import { CreateUserController } from "./controllers/user/createUserController";
 import { AuthUserController } from "./controllers/user/authUserController";
 import { DetailUserController } from "./controllers/user/detailUserController";
@@ -45,6 +46,7 @@ router.post(
   isAuthenticated,
   isAdmin,
   upload.single("file"),
+  validateSchema(createProductSchema),
   new CreateProductController().handle
 );
 
