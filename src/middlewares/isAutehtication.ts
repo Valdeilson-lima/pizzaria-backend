@@ -28,7 +28,6 @@ export function isAuthenticated(
       process.env.JWT_SECRET as string
     ) as Payload;
     req.user_id = sub;
-    console.log(req.user_id);
     return next();
   } catch (error) {
     return res.status(401).json({ error: "Token inválido" });
