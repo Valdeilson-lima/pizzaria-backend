@@ -138,6 +138,9 @@ backend/
 │   │   ├── category/
 │   │   │   ├── createCategoryController.ts  # Tratamento HTTP para criação de categorias
 │   │   │   └── listCategoryController.ts    # Tratamento HTTP para listagem de categorias
+│   │   ├── order/
+│   │   │   ├── createOrderController.ts     # Tratamento HTTP para abertura de pedido / mesa
+│   │   │   └── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
 │   │   ├── product/
 │   │   │   ├── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
 │   │   │   ├── deleteProductController.ts   # Tratamento HTTP para desativação (soft delete) de produto
@@ -157,12 +160,16 @@ backend/
 │   │   └── validateSchema.ts      # Middleware genérico de validação assíncrona Zod
 │   ├── schemas/                   # Schemas Zod de contrato de entrada (Body, Query, Params)
 │   │   ├── createCategorySchema.ts          # Contrato de payload para categoria
+│   │   ├── orderSchema.ts                   # Contrato de payload para abertura de pedidos
 │   │   ├── productSchema.ts                 # Contrato de payload para criação de produtos
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
 │   │   ├── category/
 │   │   │   ├── createCategoryService.ts     # Regras de cadastro e unicidade de categorias
 │   │   │   └── listCategoryService.ts       # Consulta e ordenação de categorias cadastradas
+│   │   ├── order/
+│   │   │   ├── createOrderService.ts        # Regras de criação e abertura de pedidos
+│   │   │   └── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
 │   │   ├── product/
 │   │   │   ├── createProductService.ts      # Validação de categoria, upload em stream e persistência
 │   │   │   ├── deleteProductService.ts      # Desativação de produto (soft delete via disabled = true)
@@ -309,6 +316,24 @@ export const listByCategorySchema = z.object({
 });
 ```
 
+#### Abertura de Pedidos (`src/schemas/orderSchema.ts`):
+
+```typescript
+import { z } from "zod";
+
+export const createOrderSchema = z.object({
+  body: z.object({
+    table: z
+      .number({
+        message: "O número da mesa é obrigatório e deve ser um número",
+      })
+      .int({ message: "O número da mesa deve ser um número inteiro" })
+      .positive({ message: "O número da mesa deve ser maior que zero" }),
+    name: z.string().optional(),
+  }),
+});
+```
+
 > **Regra Arquitetural para Uploads (`multipart/form-data`):**  
 > O middleware `express.json()` não processa requisições multipart. Em rotas que recebem arquivos (como `POST /api/product`), o middleware do Multer (`upload.single(...)`) **deve obrigatoriamente preceder** o `validateSchema(...)` no pipeline do Express. Isso assegura que os campos do formulário sejam lidos da stream e populados no `req.body` antes da execução do parse assíncrono do Zod.
 
@@ -445,17 +470,19 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 
 ### 6.1. Tabela de Rotas
 
-| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                        |
-| :------- | :---------------------- | :------------------------------------- | :------------------------------------------------------------------------------- |
-| `POST`   | `/api/users`            | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.           |
-| `POST`   | `/api/session`          | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                    |
-| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.                |
-| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                                 |
-| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                   |
-| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                    |
-| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`).    |
-| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).             |
-| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`. |
+| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                                            |
+| :------- | :---------------------- | :------------------------------------- | :--------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/users`            | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.                               |
+| `POST`   | `/api/session`          | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                                        |
+| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.                                    |
+| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                                                     |
+| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                                       |
+| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                                        |
+| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`).                        |
+| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).                                 |
+| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`.                     |
+| `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Cria uma nova ordem/pedido para uma mesa (status: `false`, draft: `true`).                           |
+| `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`). |
 
 ---
 
@@ -796,6 +823,104 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "errors": [{ "message": "O id da categoria é obrigatório" }]
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 10. Criar Pedido / Abrir Mesa (`POST /api/order`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN` (não exige perfil administrativo).
+- **Request Headers:**
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <TOKEN>`
+- **Request Body:**
+  ```json
+  {
+    "table": 12,
+    "name": "Mesa do João"
+  }
+  ```
+  _(O campo `name` é opcional)_
+- **Response `201 Created`:**
+  ```json
+  {
+    "id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "table": 12,
+    "name": "Mesa do João",
+    "status": false,
+    "draft": true,
+    "createdAt": "2026-03-15T20:30:00.000Z",
+    "updatedAt": "2026-03-15T20:30:00.000Z"
+  }
+  ```
+- **Response `400 Bad Request` (Número da mesa inválido ou ausente):**
+  ```json
+  {
+    "errors": [
+      { "message": "O número da mesa é obrigatório e deve ser um número" }
+    ]
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 11. Listar Pedidos (`GET /api/orders`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:** `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `draft` _(opcional, string)_: `"true"` para buscar pedidos em rascunho ou `"false"` para pedidos já confirmados. **Valor padrão se omitido:** `false`.
+- **Exemplo de URL:**
+  - `/api/orders` _(busca pedidos confirmados: draft = false)_
+  - `/api/orders?draft=true` _(busca rascunhos: draft = true)_
+- **Response `200 OK`:**
+  ```json
+  [
+    {
+      "id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+      "table": 12,
+      "name": "Mesa do João",
+      "status": false,
+      "draft": false,
+      "createdAt": "2026-03-15T20:30:00.000Z",
+      "orderItems": [
+        {
+          "id": "e8d2b3c1-7fa2-4b80-8a37-001122334455",
+          "amount": 2,
+          "product": {
+            "id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+            "name": "Pizza Calabresa",
+            "price": 45,
+            "description": "Molho de tomate artesanal, mussarela fatiada e calabresa",
+            "banner": "https://res.cloudinary.com/demo/image/upload/v1712800000/products/1712800000_pizza.webp",
+            "disabled": false,
+            "category": {
+              "id": "d8a1c4b2-7fa3-4c90-9b48-998877665544",
+              "name": "Pizzas Tradicionais"
+            }
+          }
+        }
+      ]
+    }
+  ]
+  ```
+- **Response `400 Bad Request` (Valor inválido no query param):**
+  ```json
+  {
+    "errors": [{ "message": "O parâmetro draft deve ser 'true' ou 'false'" }]
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**
