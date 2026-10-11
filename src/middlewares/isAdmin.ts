@@ -3,13 +3,14 @@ import { prisma } from "../lib/prisma";
 
 export const isAdmin = async (
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   const user_id = req.user_id;
 
   if (!user_id) {
-    return _res.status(401).json({ error: "Usuário não autenticado" });
+    res.status(401).json({ error: "Usuário não autenticado" });
+    return;
   }
 
   const user = await prisma.user.findFirst({
@@ -22,11 +23,13 @@ export const isAdmin = async (
   });
 
   if (!user) {
-    return _res.status(401).json({ error: "Usuário não autenticado" });
+    res.status(401).json({ error: "Usuário não autenticado" });
+    return;
   }
 
   if (user.role !== "ADMIN") {
-    return _res.status(403).json({ error: "Acesso negado" });
+    res.status(403).json({ error: "Acesso negado" });
+    return;
   }
 
   return next();
