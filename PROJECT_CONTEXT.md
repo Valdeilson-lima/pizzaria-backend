@@ -139,6 +139,7 @@ backend/
 │   │   │   ├── createCategoryController.ts  # Tratamento HTTP para criação de categorias
 │   │   │   └── listCategoryController.ts    # Tratamento HTTP para listagem de categorias
 │   │   ├── order/
+│   │   │   ├── addItemOrderController.ts    # Tratamento HTTP para adição de item/produto ao pedido
 │   │   │   ├── createOrderController.ts     # Tratamento HTTP para abertura de pedido / mesa
 │   │   │   └── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
 │   │   ├── product/
@@ -160,7 +161,7 @@ backend/
 │   │   └── validateSchema.ts      # Middleware genérico de validação assíncrona Zod
 │   ├── schemas/                   # Schemas Zod de contrato de entrada (Body, Query, Params)
 │   │   ├── createCategorySchema.ts          # Contrato de payload para categoria
-│   │   ├── orderSchema.ts                   # Contrato de payload para abertura de pedidos
+│   │   ├── orderSchema.ts                   # Contratos de payload para pedidos (abertura, listagem e itens)
 │   │   ├── productSchema.ts                 # Contrato de payload para criação de produtos
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
@@ -168,6 +169,7 @@ backend/
 │   │   │   ├── createCategoryService.ts     # Regras de cadastro e unicidade de categorias
 │   │   │   └── listCategoryService.ts       # Consulta e ordenação de categorias cadastradas
 │   │   ├── order/
+│   │   │   ├── addItemOrderService.ts       # Validação e adição de itens a um pedido aberto
 │   │   │   ├── createOrderService.ts        # Regras de criação e abertura de pedidos
 │   │   │   └── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
 │   │   ├── product/
@@ -483,6 +485,7 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 | `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`.                     |
 | `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Cria uma nova ordem/pedido para uma mesa (status: `false`, draft: `true`).                           |
 | `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`). |
+| `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item (produto ativo e quantidade) a uma ordem/pedido existente.                          |
 
 ---
 
@@ -921,6 +924,69 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "errors": [{ "message": "O parâmetro draft deve ser 'true' ou 'false'" }]
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 12. Adicionar Item ao Pedido (`POST /api/order/add`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <TOKEN>`
+- **Request Body:**
+  ```json
+  {
+    "order_id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "product_id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+    "amount": 2
+  }
+  ```
+- **Campos do Payload:**
+  - `order_id` _(string, obrigatório)_: UUID do pedido existente ao qual o item será associado.
+  - `product_id` _(string, obrigatório)_: UUID do produto ativo que está sendo adicionado.
+  - `amount` _(number, obrigatório)_: Número inteiro positivo (> 0) representando a quantidade do produto.
+- **Regras de Negócio (`AddItemOrderService`):**
+  - Valida se o pedido existe na tabela `orders`. Caso contrário, lança erro `"Pedido não encontrado"`.
+  - Valida se o produto existe e está ativo na tabela `products` (`disabled: false`). Caso contrário, lança erro `"Produto não encontrado"`.
+  - Persiste o registro na tabela `order_items`.
+- **Response `200 OK`:**
+  ```json
+  {
+    "id": "e8d2b3c1-7fa2-4b80-8a37-001122334455",
+    "amount": 2,
+    "order_id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "product_id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+    "createdAt": "2026-03-15T20:35:00.000Z",
+    "updatedAt": "2026-03-15T20:35:00.000Z"
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [
+      { "message": "O ID do pedido é obrigatório" },
+      { "message": "A quantidade deve ser maior que zero" }
+    ]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Pedido não encontrado"
+  }
+  ```
+  ou
+  ```json
+  {
+    "error": "Produto não encontrado"
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**
