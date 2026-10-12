@@ -141,6 +141,7 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderController.ts    # Tratamento HTTP para adição de item/produto ao pedido
 │   │   │   ├── createOrderController.ts     # Tratamento HTTP para abertura de pedido / mesa
+│   │   │   ├── detailOrderController.ts     # Tratamento HTTP para detalhamento de pedido via query param
 │   │   │   ├── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
 │   │   │   └── removeItemOrderController.ts # Tratamento HTTP para remoção de item do pedido via query param
 │   │   ├── product/
@@ -162,7 +163,7 @@ backend/
 │   │   └── validateSchema.ts      # Middleware genérico de validação assíncrona Zod
 │   ├── schemas/                   # Schemas Zod de contrato de entrada (Body, Query, Params)
 │   │   ├── createCategorySchema.ts          # Contrato de payload para categoria
-│   │   ├── orderSchema.ts                   # Contratos de payload para pedidos (abertura, listagem e itens)
+│   │   ├── orderSchema.ts                   # Contratos de payload para pedidos (abertura, listagem, itens e detalhamento)
 │   │   ├── productSchema.ts                 # Contrato de payload para criação de produtos
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
@@ -172,6 +173,7 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderService.ts       # Validação e adição de itens a um pedido aberto
 │   │   │   ├── createOrderService.ts        # Regras de criação e abertura de pedidos
+│   │   │   ├── detailOrderService.ts        # Busca detalhada de itens, produtos e dados de um pedido
 │   │   │   ├── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
 │   │   │   └── removeItemOrderService.ts    # Validação e exclusão de item de pedido
 │   │   ├── product/
@@ -489,6 +491,7 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 | `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`). |
 | `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item (produto ativo e quantidade) a uma ordem/pedido existente.                          |
 | `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id` via query param.                        |
+| `GET`    | `/api/order/detail`     | **Autenticado** (Bearer JWT)           | Detalha um pedido listando todos os seus itens, produtos e dados da mesa/ordem (`order_id`).         |
 
 ---
 
@@ -1034,6 +1037,65 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "error": "Item não encontrado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 14. Detalhar Pedido (`GET /api/order/detail`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `order_id` _(obrigatório, string)_: UUID do pedido existente a ser detalhado.
+- **Exemplo de URL:**
+  - `/api/order/detail?order_id=f2a1c4b2-8fa3-4c90-9b48-112233445566`
+- **Regras de Negócio (`DetailOrderService`):**
+  - Busca e valida o pedido na tabela `orders` via `prisma.order.findUnique` com seleção de campos do pedido e inclusão relacional dos seus itens (`orderItems`) e dados do produto (`product`). Caso o pedido não exista, lança erro `"Pedido não encontrado"`.
+- **Response `200 OK`:**
+  ```json
+  {
+    "id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "table": 12,
+    "name": "Mesa do João",
+    "draft": true,
+    "status": false,
+    "createdAt": "2026-03-15T20:30:00.000Z",
+    "updatedAt": "2026-03-15T20:30:00.000Z",
+    "orderItems": [
+      {
+        "id": "e8d2b3c1-7fa2-4b80-8a37-001122334455",
+        "amount": 2,
+        "createdAt": "2026-03-15T20:35:00.000Z",
+        "updatedAt": "2026-03-15T20:35:00.000Z",
+        "product": {
+          "id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+          "name": "Pizza Calabresa",
+          "price": 45,
+          "description": "Molho de tomate artesanal, mussarela fatiada e calabresa",
+          "banner": "https://res.cloudinary.com/demo/image/upload/v1712800000/products/1712800000_pizza.webp"
+        }
+      }
+    ]
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [{ "message": "O ID do pedido é obrigatório" }]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Pedido não encontrado"
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**
