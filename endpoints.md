@@ -29,6 +29,16 @@
 
 ---
 
+## 🔎 Observações Importantes da API
+
+- O prefixo base da API é `http://localhost:3333/api`.
+- Endpoints com nível **Auth** ou **Admin** exigem o cabeçalho `Authorization` com token JWT válido.
+- Em `GET /products`, `GET /orders` e demais filtros opcionais, os valores vindos da query são enviados como string, com `"true"` ou `"false"` quando aplicável.
+- No cadastro de usuário, o e-mail é validado como único e a senha é armazenada com hash (`bcryptjs`).
+- Na criação de produto, o campo `price` chega em `multipart/form-data` como string numérica (ex.: `"45"`) e é convertido internamente para número inteiro.
+
+---
+
 ## 🔒 Padrão de Autenticação e Erros
 
 ### Headers de Autenticação
@@ -93,6 +103,7 @@ A API padroniza os erros em duas estruturas:
 }
 ```
 
+- **Comportamento:** valida email duplicado antes de criar o usuário, aplica hash na senha e salva o perfil padrão como `STAFF`.
 - **Response `201 Created`:**
 
 ```json
@@ -101,12 +112,18 @@ A API padroniza os erros em duas estruturas:
     "user": {
       "id": "c1f7b9e0-8fa3-4c90-9b48-1123456789ab",
       "name": "João Silva",
-      "email": "joao@pizzaria.com"
+      "email": "joao@pizzaria.com",
+      "role": "STAFF",
+      "createdAt": "2026-03-15T18:30:00.000Z",
+      "updatedAt": "2026-03-15T18:30:00.000Z"
     },
     "message": "Usuario criado com sucesso"
   }
 }
 ```
+
+- **Erros Comuns:**
+  - `400 Bad Request` com `{ "error": "Usuario já existe" }` quando o e-mail informado já estiver cadastrado.
 
 ---
 
@@ -123,6 +140,7 @@ A API padroniza os erros em duas estruturas:
 }
 ```
 
+- **Comportamento:** valida o e-mail e a senha, compara com o hash salvo em banco e retorna o JWT em `user.token`.
 - **Response `200 OK`:**
 
 ```json
@@ -136,6 +154,9 @@ A API padroniza os erros em duas estruturas:
   }
 }
 ```
+
+- **Erros Comuns:**
+  - `400 Bad Request` com `{ "error": "Credenciais inválidas" }` quando o e-mail ou a senha não conferem.
 
 ---
 
@@ -185,6 +206,9 @@ A API padroniza os erros em duas estruturas:
 }
 ```
 
+- **Erros Comuns:**
+  - `403 Forbidden` com `{ "error": "Acesso negado" }` quando o usuário não é admin.
+
 ---
 
 ### 2.2. Listar Categorias (`GET /category`)
@@ -222,6 +246,7 @@ A API padroniza os erros em duas estruturas:
   - `description`: string (ex: `"Molho artesanal, mussarela e calabresa"`)
   - `categoryId`: string UUID da categoria existente
   - `file`: Arquivo de imagem (`.jpg`, `.png`, `.webp`, máx. 4MB)
+- **Comportamento:** valida a categoria informada, faz upload do banner para o Cloudinary e converte `price` em número inteiro antes de persistir.
 - **Response `201 Created`:**
 
 ```json
@@ -333,6 +358,7 @@ A API padroniza os erros em duas estruturas:
 
 > `table` é obrigatório (número inteiro positivo). `name` é opcional.
 
+- **Comportamento:** bloqueia a criação de pedido em mesa já ocupada e valida `table` antes de abrir o pedido.
 - **Response `201 Created`:**
 
 ```json
