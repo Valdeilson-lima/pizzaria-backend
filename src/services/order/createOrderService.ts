@@ -7,9 +7,14 @@ interface CreateOrderRequest {
 
 class CreateOrderService {
   async execute({ table, name }: CreateOrderRequest) {
+    if (!table || table <= 0) {
+      throw new Error("Número da mesa inválido");
+    }
+
     const orderExists = await prisma.order.findFirst({
       where: {
         table,
+        status: false,
       },
     });
 

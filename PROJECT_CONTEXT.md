@@ -141,9 +141,12 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderController.ts    # Tratamento HTTP para adição de item/produto ao pedido
 │   │   │   ├── createOrderController.ts     # Tratamento HTTP para abertura de pedido / mesa
+│   │   │   ├── deleteOrderController.ts     # Tratamento HTTP para exclusão/cancelamento de pedido via query param
 │   │   │   ├── detailOrderController.ts     # Tratamento HTTP para detalhamento de pedido via query param
+│   │   │   ├── finishOrderController.ts     # Tratamento HTTP para finalização do pedido e liberação da mesa
 │   │   │   ├── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
-│   │   │   └── removeItemOrderController.ts # Tratamento HTTP para remoção de item do pedido via query param
+│   │   │   ├── removeItemOrderController.ts # Tratamento HTTP para remoção de item do pedido via query param
+│   │   │   └── sendOrderController.ts       # Tratamento HTTP para envio de pedido para a cozinha (draft: false)
 │   │   ├── product/
 │   │   │   ├── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
 │   │   │   ├── deleteProductController.ts   # Tratamento HTTP para desativação (soft delete) de produto
@@ -163,7 +166,7 @@ backend/
 │   │   └── validateSchema.ts      # Middleware genérico de validação assíncrona Zod
 │   ├── schemas/                   # Schemas Zod de contrato de entrada (Body, Query, Params)
 │   │   ├── createCategorySchema.ts          # Contrato de payload para categoria
-│   │   ├── orderSchema.ts                   # Contratos de payload para pedidos (abertura, listagem, itens e detalhamento)
+│   │   ├── orderSchema.ts                   # Contratos de payload para pedidos (abertura, listagem, itens, detalhamento, envio, finalização e exclusão)
 │   │   ├── productSchema.ts                 # Contrato de payload para criação de produtos
 │   │   └── userSchema.ts                    # Contratos de payload para registro e login
 │   ├── services/                  # Lógica de negócio pura e independente de protocolo
@@ -173,9 +176,12 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderService.ts       # Validação e adição de itens a um pedido aberto
 │   │   │   ├── createOrderService.ts        # Regras de criação e abertura de pedidos
+│   │   │   ├── deleteOrderService.ts        # Validação e exclusão de pedido com liberação de mesa
 │   │   │   ├── detailOrderService.ts        # Busca detalhada de itens, produtos e dados de um pedido
+│   │   │   ├── finishOrderService.ts        # Finalização do pedido (status: true) e liberação da mesa
 │   │   │   ├── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
-│   │   │   └── removeItemOrderService.ts    # Validação e exclusão de item de pedido
+│   │   │   ├── removeItemOrderService.ts    # Validação e exclusão de item de pedido
+│   │   │   └── sendOrderService.ts          # Alteração do status do pedido para produção (draft: false)
 │   │   ├── product/
 │   │   │   ├── createProductService.ts      # Validação de categoria, upload em stream e persistência
 │   │   │   ├── deleteProductService.ts      # Desativação de produto (soft delete via disabled = true)
@@ -322,7 +328,7 @@ export const listByCategorySchema = z.object({
 });
 ```
 
-#### Abertura de Pedidos (`src/schemas/orderSchema.ts`):
+#### Abertura, Finalização e Exclusão de Pedidos (`src/schemas/orderSchema.ts`):
 
 ```typescript
 import { z } from "zod";
@@ -336,6 +342,22 @@ export const createOrderSchema = z.object({
       .int({ message: "O número da mesa deve ser um número inteiro" })
       .positive({ message: "O número da mesa deve ser maior que zero" }),
     name: z.string().optional(),
+  }),
+});
+
+export const finishOrderSchema = z.object({
+  body: z.object({
+    order_id: z
+      .string({ message: "O ID do pedido é obrigatório" })
+      .min(1, { message: "O ID do pedido é obrigatório" }),
+  }),
+});
+
+export const deleteOrderSchema = z.object({
+  query: z.object({
+    order_id: z
+      .string({ message: "O ID do pedido é obrigatório" })
+      .min(1, { message: "O ID do pedido é obrigatório" }),
   }),
 });
 ```
@@ -476,22 +498,25 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 
 ### 6.1. Tabela de Rotas
 
-| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                                            |
-| :------- | :---------------------- | :------------------------------------- | :--------------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/users`            | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.                               |
-| `POST`   | `/api/session`          | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                                        |
-| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.                                    |
-| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                                                     |
-| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                                       |
-| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                                        |
-| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`).                        |
-| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).                                 |
-| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`.                     |
-| `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Cria uma nova ordem/pedido para uma mesa (status: `false`, draft: `true`).                           |
-| `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`). |
-| `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item (produto ativo e quantidade) a uma ordem/pedido existente.                          |
-| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id` via query param.                        |
-| `GET`    | `/api/order/detail`     | **Autenticado** (Bearer JWT)           | Detalha um pedido listando todos os seus itens, produtos e dados da mesa/ordem (`order_id`).         |
+| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                                             |
+| :------- | :---------------------- | :------------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/users`            | **Público**                            | Registra um novo colaborador no sistema com perfil `STAFF` por padrão.                                |
+| `POST`   | `/api/session`          | **Público**                            | Autentica e-mail/senha e emite token JWT com validade de 24h.                                         |
+| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do perfil do usuário autenticado no token.                                     |
+| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cria uma nova categoria de produtos no cardápio.                                                      |
+| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias de produtos cadastradas no cardápio.                                        |
+| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.                                         |
+| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro opcional por `disabled` (padrão: `false`).                         |
+| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).                                  |
+| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria informada via `categoryId`.                      |
+| `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Cria uma nova ordem/pedido para uma mesa (status: `false`, draft: `true`).                            |
+| `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`).  |
+| `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item (produto ativo e quantidade) a uma ordem/pedido existente.                           |
+| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id` via query param.                         |
+| `GET`    | `/api/order/detail`     | **Autenticado** (Bearer JWT)           | Detalha um pedido listando todos os seus itens, produtos e dados da mesa/ordem (`order_id`).          |
+| `PUT`    | `/api/order/send`       | **Autenticado** (Bearer JWT)           | Envia o pedido para a cozinha alterando seu status de rascunho (`draft: false`).                      |
+| `PUT`    | `/api/order/finish`     | **Autenticado** (Bearer JWT)           | Finaliza o pedido alterando seu status (`status: true`), liberando a mesa para novas ordens.          |
+| `DELETE` | `/api/order`            | **Autenticado** (Bearer JWT)           | Deleta/cancela um pedido via query param (`order_id`), removendo itens em cascata e liberando a mesa. |
 
 ---
 
@@ -869,6 +894,15 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
     "updatedAt": "2026-03-15T20:30:00.000Z"
   }
   ```
+- **Regras de Negócio (`CreateOrderService`):**
+  - Verifica se a mesa já possui um pedido ativo em aberto (`where: { table, status: false }`). Se existir, lança erro `"Mesa já está ocupada"`.
+  - Mesas com pedidos já finalizados (`status: true`) são consideradas livres para novas aberturas.
+- **Response `400 Bad Request` (Mesa já ocupada):**
+  ```json
+  {
+    "error": "Mesa já está ocupada"
+  }
+  ```
 - **Response `400 Bad Request` (Número da mesa inválido ou ausente):**
   ```json
   {
@@ -1084,6 +1118,153 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
         }
       }
     ]
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [{ "message": "O ID do pedido é obrigatório" }]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Pedido não encontrado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 15. Enviar Pedido para a Cozinha (`PUT /api/order/send`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <TOKEN>`
+- **Request Body:**
+  ```json
+  {
+    "order_id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "name": "Mesa do João"
+  }
+  ```
+- **Campos do Payload:**
+  - `order_id` _(string, obrigatório)_: UUID do pedido a ser despachado para a cozinha.
+  - `name` _(string, opcional)_: Nome do cliente informado no momento de envio/finalização do pedido no app mobile.
+- **Regras de Negócio (`SendOrderService`):**
+  - Valida se o pedido existe na tabela `orders` via `prisma.order.findUnique({ where: { id: order_id } })`. Caso não exista, lança erro `"Pedido não encontrado"`.
+  - Atualiza o campo `draft` para `false` e, se informado, atualiza o campo `name` do pedido. Torna o pedido visível na fila de produção da cozinha.
+- **Response `200 OK`:**
+  ```json
+  {
+    "id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "table": 12,
+    "name": "Mesa do João",
+    "draft": false,
+    "status": false,
+    "createdAt": "2026-03-15T20:30:00.000Z"
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [{ "message": "O ID do pedido é obrigatório" }]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Pedido não encontrado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 16. Finalizar Pedido / Fechar Mesa (`PUT /api/order/finish`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Content-Type: application/json`
+  - `Authorization: Bearer <TOKEN>`
+- **Request Body:**
+  ```json
+  {
+    "order_id": "f2a1c4b2-8fa3-4c90-9b48-112233445566"
+  }
+  ```
+- **Campos do Payload:**
+  - `order_id` _(string, obrigatório)_: UUID do pedido a ser finalizado.
+- **Regras de Negócio (`FinishOrderService`):**
+  - Valida se o pedido existe na tabela `orders` via `prisma.order.findUnique({ where: { id: order_id } })`. Caso não exista, lança erro `"Pedido não encontrado"`.
+  - Valida se o pedido já foi finalizado (`order.status === true`). Caso positivo, lança erro `"Este pedido já foi finalizado"`.
+  - Atualiza o campo `status` para `true`. Com isso, a mesa associada (`table`) é **automaticamente liberada** para novas ordens de atendimento.
+- **Response `200 OK`:**
+  ```json
+  {
+    "id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "table": 12,
+    "name": "Mesa do João",
+    "draft": false,
+    "status": true,
+    "createdAt": "2026-03-15T20:30:00.000Z"
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [{ "message": "O ID do pedido é obrigatório" }]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Pedido não encontrado"
+  }
+  ```
+  ou
+  ```json
+  {
+    "error": "Este pedido já foi finalizado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 17. Deletar Pedido / Cancelar Mesa (`DELETE /api/order`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `order_id` _(obrigatório, string UUID)_: Identificador único do pedido a ser removido/cancelado.
+- **Exemplo de URL:**
+  - `/api/order?order_id=f2a1c4b2-8fa3-4c90-9b48-112233445566`
+- **Regras de Negócio (`DeleteOrderService`):**
+  - Valida se o pedido existe na tabela `orders` via `prisma.order.findUnique({ where: { id: order_id } })`. Caso não exista, lança erro `"Pedido não encontrado"`.
+  - Executa a deleção física do registro via `prisma.order.delete({ where: { id: order_id } })`. Pela regra de integridade relacional com `onDelete: Cascade` definida no Prisma schema (`order_items_order_id_fkey`), todos os itens vinculados ao pedido (`order_items`) são removidos automaticamente do banco.
+  - A mesa associada é imediatamente liberada para novas aberturas.
+- **Response `200 OK`:**
+  ```json
+  {
+    "message": "Pedido deletado com sucesso"
   }
   ```
 - **Response `400 Bad Request` (Violação de validação Zod):**

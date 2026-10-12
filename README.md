@@ -21,22 +21,25 @@ API RESTful para gestão operacional de pizzaria desenvolvida com **Node.js**, *
 
 ## 🛣️ Rotas Disponíveis (Base: `/api`)
 
-| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                             |
-| :------- | :---------------------- | :------------------------------------- | :-------------------------------------------------------------------- |
-| `POST`   | `/api/users`            | **Público**                            | Cadastro de novo usuário/colaborador (perfil `STAFF` padrão).         |
-| `POST`   | `/api/session`          | **Público**                            | Login de usuário com e-mail/senha e geração de token JWT.             |
-| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do usuário autenticado.                        |
-| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cadastra uma nova categoria no cardápio.                              |
-| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias cadastradas ordenadas por nome.             |
-| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.         |
-| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro por `disabled` (padrão: `false`).  |
-| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).  |
-| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria (`categoryId`).  |
-| `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Abre um novo pedido para uma mesa (`status: false`, `draft: true`).   |
-| `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista pedidos com itens e produtos (filtro `draft`, padrão: `false`). |
-| `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item/produto e sua quantidade a um pedido existente.      |
-| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id`.         |
-| `GET`    | `/api/order/detail`     | **Autenticado** (Bearer JWT)           | Detalha um pedido listando itens, produtos e dados da mesa/ordem.     |
+| Método   | Endpoint                | Nível de Acesso                        | Descrição                                                                   |
+| :------- | :---------------------- | :------------------------------------- | :-------------------------------------------------------------------------- |
+| `POST`   | `/api/users`            | **Público**                            | Cadastro de novo usuário/colaborador (perfil `STAFF` padrão).               |
+| `POST`   | `/api/session`          | **Público**                            | Login de usuário com e-mail/senha e geração de token JWT.                   |
+| `GET`    | `/api/me`               | **Autenticado** (Bearer JWT)           | Retorna as informações do usuário autenticado.                              |
+| `POST`   | `/api/category`         | **Autenticado + Admin** (Role `ADMIN`) | Cadastra uma nova categoria no cardápio.                                    |
+| `GET`    | `/api/category`         | **Autenticado** (Bearer JWT)           | Lista todas as categorias cadastradas ordenadas por nome.                   |
+| `POST`   | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Cadastra um novo produto com upload de imagem via Cloudinary.               |
+| `GET`    | `/api/products`         | **Autenticado** (Bearer JWT)           | Lista todos os produtos com filtro por `disabled` (padrão: `false`).        |
+| `DELETE` | `/api/product`          | **Autenticado + Admin** (Role `ADMIN`) | Desativa um produto do cardápio (soft delete via `disabled = true`).        |
+| `GET`    | `/api/category/product` | **Autenticado** (Bearer JWT)           | Lista todos os produtos pertencentes a uma categoria (`categoryId`).        |
+| `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Abre um novo pedido para uma mesa (`status: false`, `draft: true`).         |
+| `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista pedidos com itens e produtos (filtro `draft`, padrão: `false`).       |
+| `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item/produto e sua quantidade a um pedido existente.            |
+| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id`.               |
+| `GET`    | `/api/order/detail`     | **Autenticado** (Bearer JWT)           | Detalha um pedido listando itens, produtos e dados da mesa/ordem.           |
+| `PUT`    | `/api/order/send`       | **Autenticado** (Bearer JWT)           | Envia pedido para a cozinha (`draft: false`), com nome do cliente opcional. |
+| `PUT`    | `/api/order/finish`     | **Autenticado** (Bearer JWT)           | Finaliza o pedido (`status: true`), liberando a mesa para novas ordens.     |
+| `DELETE` | `/api/order`            | **Autenticado** (Bearer JWT)           | Cancela/remove um pedido (`order_id`) com deleção em cascata dos itens.     |
 
 ---
 
