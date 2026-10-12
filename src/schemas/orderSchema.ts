@@ -38,3 +38,11 @@ export const addItemOrderSchema = z.object({
       .positive({ message: "A quantidade deve ser maior que zero" }),
   }),
 });
+
+export const removeItemOrderSchema = z.object({
+  query: z.object({
+    item_id: z
+      .string({ message: "O ID do item é obrigatório" })
+      .min(1, { message: "O ID do item é obrigatório" }),
+  }),
+});

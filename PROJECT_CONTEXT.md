@@ -141,7 +141,8 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderController.ts    # Tratamento HTTP para adição de item/produto ao pedido
 │   │   │   ├── createOrderController.ts     # Tratamento HTTP para abertura de pedido / mesa
-│   │   │   └── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
+│   │   │   ├── listOrdersController.ts      # Tratamento HTTP para listagem de pedidos com filtro draft
+│   │   │   └── removeItemOrderController.ts # Tratamento HTTP para remoção de item do pedido via query param
 │   │   ├── product/
 │   │   │   ├── createProductController.ts   # Tratamento HTTP para cadastro de produtos com upload
 │   │   │   ├── deleteProductController.ts   # Tratamento HTTP para desativação (soft delete) de produto
@@ -171,7 +172,8 @@ backend/
 │   │   ├── order/
 │   │   │   ├── addItemOrderService.ts       # Validação e adição de itens a um pedido aberto
 │   │   │   ├── createOrderService.ts        # Regras de criação e abertura de pedidos
-│   │   │   └── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
+│   │   │   ├── listOrderServices.ts         # Consulta e listagem de pedidos com itens e produtos
+│   │   │   └── removeItemOrderService.ts    # Validação e exclusão de item de pedido
 │   │   ├── product/
 │   │   │   ├── createProductService.ts      # Validação de categoria, upload em stream e persistência
 │   │   │   ├── deleteProductService.ts      # Desativação de produto (soft delete via disabled = true)
@@ -486,6 +488,7 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
 | `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Cria uma nova ordem/pedido para uma mesa (status: `false`, draft: `true`).                           |
 | `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista todos os pedidos com seus itens e produtos, com filtro opcional por `draft` (padrão: `false`). |
 | `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item (produto ativo e quantidade) a uma ordem/pedido existente.                          |
+| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id` via query param.                        |
 
 ---
 
@@ -987,6 +990,50 @@ Todas as rotas são expostas a partir do prefixo base: `/api`.
   ```json
   {
     "error": "Produto não encontrado"
+  }
+  ```
+- **Response `401 Unauthorized` (Token ausente ou inválido):**
+  ```json
+  {
+    "error": "Token não fornecido"
+  }
+  ```
+
+---
+
+#### 13. Remover Item do Pedido (`DELETE /api/order/remove`)
+
+- **Nível de Acesso:** Autenticado (`Authorization: Bearer <TOKEN>`) — colaboradores com papel `STAFF` ou `ADMIN`.
+- **Request Headers:**
+  - `Authorization: Bearer <TOKEN>`
+- **Query Params:**
+  - `item_id` _(obrigatório, string)_: UUID do item (`order_items`) a ser removido.
+- **Exemplo de URL:**
+  - `/api/order/remove?item_id=e8d2b3c1-7fa2-4b80-8a37-001122334455`
+- **Regras de Negócio (`RemoveItemOrderService`):**
+  - Verifica se o item existe na tabela `order_items` via `prisma.orderItem.findFirst({ where: { id: item_id } })`. Caso não exista, lança erro `"Item não encontrado"`.
+  - Deleta o item no banco de dados via `prisma.orderItem.delete({ where: { id: item_id } })`.
+- **Response `200 OK`:**
+  ```json
+  {
+    "id": "e8d2b3c1-7fa2-4b80-8a37-001122334455",
+    "amount": 2,
+    "order_id": "f2a1c4b2-8fa3-4c90-9b48-112233445566",
+    "product_id": "a5d3f1c2-9fa4-4b90-9c48-223344556677",
+    "createdAt": "2026-03-15T20:35:00.000Z",
+    "updatedAt": "2026-03-15T20:35:00.000Z"
+  }
+  ```
+- **Response `400 Bad Request` (Violação de validação Zod):**
+  ```json
+  {
+    "errors": [{ "message": "O ID do item é obrigatório" }]
+  }
+  ```
+- **Response `400 Bad Request` (Regra de negócio):**
+  ```json
+  {
+    "error": "Item não encontrado"
   }
   ```
 - **Response `401 Unauthorized` (Token ausente ou inválido):**

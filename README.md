@@ -35,6 +35,7 @@ API RESTful para gestão operacional de pizzaria desenvolvida com **Node.js**, *
 | `POST`   | `/api/order`            | **Autenticado** (Bearer JWT)           | Abre um novo pedido para uma mesa (`status: false`, `draft: true`).   |
 | `GET`    | `/api/orders`           | **Autenticado** (Bearer JWT)           | Lista pedidos com itens e produtos (filtro `draft`, padrão: `false`). |
 | `POST`   | `/api/order/add`        | **Autenticado** (Bearer JWT)           | Adiciona um item/produto e sua quantidade a um pedido existente.      |
+| `DELETE` | `/api/order/remove`     | **Autenticado** (Bearer JWT)           | Remove um item de um pedido existente informando o `item_id`.         |
 
 ---
 
