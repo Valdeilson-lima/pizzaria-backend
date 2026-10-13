@@ -39,6 +39,8 @@ class AuthUserService {
         id: userExists.id,
         name: userExists.name,
         email: userExists.email,
+        role: userExists.role,
+        createdAt: userExists.createdAt,
         token: token,
       },
       message: "Usuario autenticado com sucesso",
